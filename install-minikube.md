@@ -1,88 +1,84 @@
-# Kubernetes Install with Minikube on Linux
+# Minikube Install with Podman on Rocky Linux
 
-Ez egy alap Kubernetes telepítési jegyzet tanulási célra.  
-A cél: egy helyi, egynode-os Kubernetes cluster indítása `minikube` segítségével.
+Ez a jegyzet egy alap Kubernetes tanulókörnyezet telepítését mutatja be Rocky Linux alatt.
 
-## Mit telepítünk?
+A cél:
 
-- `kubectl` – Kubernetes parancssori eszköz
-- `minikube` – helyi Kubernetes cluster tanuláshoz
-- Docker vagy más container runtime – konténerek futtatásához
+- Podman telepítése container runtime-ként
+- Minikube telepítése
+- Minikube indítása Podman driverrel
+- Első Kubernetes ellenőrzés
 
-## 1. Rendszer ellenőrzése
+---
 
-```bash
-uname -m
-```
+## 1. Mi kell hozzá?
 
-Elvárt architektúra általában:
+A Minikube egy helyi Kubernetes clustert indít.
+
+Ehhez kell egy container runtime, ami ténylegesen futtatja a konténereket.
+
+Rocky / RHEL vonalon erre jó választás a Podman.
+
+Egyszerűen:
 
 ```text
-x86_64
+Minikube = helyi Kubernetes cluster
+Podman = konténerek futtatása
+kubectl = Kubernetes parancssori kezelés
 ```
 
-Ellenőrizd, hogy van-e internetkapcsolat:
+---
+
+## 2. Rendszer frissítése
 
 ```bash
-ping -c 3 google.com
+dnf update -y
 ```
 
-## 2. Docker ellenőrzése
+---
+
+## 3. Podman telepítése
 
 ```bash
-docker --version
-```
-
-Ha Docker fut:
-
-```bash
-systemctl status docker
-```
-
-Ha nincs Docker, először container runtime-ot kell telepíteni.
-
-## 3. kubectl telepítése
-
-```bash
-curl -LO "https://dl.k8s.io/release/stable.txt"
-```
-
-A legfrissebb stabil verzió letöltése:
-
-```bash
-KUBECTL_VERSION=$(cat stable.txt)
-curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
-```
-
-Telepítés:
-
-```bash
-chmod +x kubectl
-sudo mv kubectl /usr/local/bin/
+dnf install -y podman
 ```
 
 Ellenőrzés:
 
 ```bash
-kubectl version --client
+podman --version
 ```
 
-## 4. minikube telepítése
+Teszt:
+
+```bash
+podman info
+```
+
+Ha ezek működnek, akkor a Podman telepítve van.
+
+---
+
+## 4. Minikube letöltése
+
+Fontos: a letöltést és az install parancsot külön sorban kell futtatni.
 
 ```bash
 curl -LO https://github.com/kubernetes/minikube/releases/latest/download/minikube-linux-amd64
 ```
 
-Telepítés:
+---
+
+## 5. Minikube telepítése
 
 ```bash
-sudo install minikube-linux-amd64 /usr/local/bin/minikube
+install minikube-linux-amd64 /usr/local/bin/minikube
 ```
 
 Takarítás:
 
 ```bash
-rm minikube-linux-amd64
+rm -f minikube-linux-amd64
 ```
 
 Ellenőrzés:
@@ -91,94 +87,127 @@ Ellenőrzés:
 minikube version
 ```
 
-## 5. Kubernetes cluster indítása Docker driverrel
+---
+
+## 6. Minikube indítása Podman driverrel
+
+Ha rootként dolgozol:
 
 ```bash
-minikube start --driver=docker
+minikube start --driver=podman --force
 ```
 
-Ellenőrzés:
+Normál userként:
+
+```bash
+minikube start --driver=podman
+```
+
+Megjegyzés: rootként a `--force` azért kellhet, mert a Minikube alapból nem szereti, ha rootként indítják.
+
+---
+
+## 7. Minikube állapot ellenőrzése
 
 ```bash
 minikube status
 ```
 
-Node ellenőrzése:
+Ha minden jó, ilyesmit kell látni:
+
+```text
+host: Running
+kubelet: Running
+apiserver: Running
+kubeconfig: Configured
+```
+
+---
+
+## 8. Kubernetes node ellenőrzése
+
+Ha van `kubectl` telepítve:
 
 ```bash
 kubectl get nodes
 ```
 
-Ha jó, ilyesmit látunk:
+Ha nincs külön `kubectl`, akkor Minikube-on keresztül is használható:
+
+```bash
+minikube kubectl -- get nodes
+```
+
+Jó eredmény például:
 
 ```text
 NAME       STATUS   ROLES           AGE   VERSION
-minikube   Ready    control-plane    ...   ...
+minikube   Ready    control-plane    1m    v1.xx.x
 ```
 
-## 6. Cluster információk
+---
+
+## 9. Podok ellenőrzése minden namespace-ben
 
 ```bash
-kubectl cluster-info
+minikube kubectl -- get pods -A
 ```
 
-Minden namespace podjainak listázása:
+Ez megmutatja a Kubernetes rendszerpodokat is.
+
+---
+
+## 10. Első teszt deployment
 
 ```bash
-kubectl get pods -A
-```
-
-## 7. Első teszt deployment
-
-```bash
-kubectl create deployment hello-nginx --image=nginx
+minikube kubectl -- create deployment hello-nginx --image=nginx
 ```
 
 Ellenőrzés:
 
 ```bash
-kubectl get deployments
-kubectl get pods
+minikube kubectl -- get deployments
+minikube kubectl -- get pods
 ```
 
-## 8. Service létrehozása
+---
+
+## 11. Service létrehozása
 
 ```bash
-kubectl expose deployment hello-nginx --type=NodePort --port=80
+minikube kubectl -- expose deployment hello-nginx --type=NodePort --port=80
 ```
 
-Service ellenőrzése:
+Ellenőrzés:
 
 ```bash
-kubectl get services
+minikube kubectl -- get services
 ```
 
-Minikube service megnyitása:
-
-```bash
-minikube service hello-nginx
-```
-
-Ha szerveren vagy grafikus böngésző nélkül, akkor URL lekérése:
+URL lekérése:
 
 ```bash
 minikube service hello-nginx --url
 ```
 
-## 9. Teszt törlése
+---
+
+## 12. Teszt törlése
 
 ```bash
-kubectl delete service hello-nginx
-kubectl delete deployment hello-nginx
+minikube kubectl -- delete service hello-nginx
+minikube kubectl -- delete deployment hello-nginx
 ```
 
 Ellenőrzés:
 
 ```bash
-kubectl get all
+minikube kubectl -- get all
 ```
 
-## 10. Minikube leállítása
+---
+
+## 13. Minikube leállítása
 
 ```bash
 minikube stop
@@ -187,7 +216,7 @@ minikube stop
 Újraindítás:
 
 ```bash
-minikube start
+minikube start --driver=podman --force
 ```
 
 Teljes törlés:
@@ -196,75 +225,86 @@ Teljes törlés:
 minikube delete
 ```
 
-## 11. Fontos ellenőrző parancsok
+---
 
-```bash
-kubectl version --client
-minikube version
-minikube status
-kubectl get nodes
-kubectl get pods -A
-kubectl get all
-```
+## 14. Gyakori hibák
 
-## 12. Gyakori hibák
+### minikube: command not found
 
-### Docker nem fut
-
-Hiba például:
-
-```text
-docker is not running
-```
+A Minikube nincs telepítve vagy nincs benne a PATH-ban.
 
 Ellenőrzés:
 
 ```bash
-systemctl status docker
+which minikube
 ```
 
-Indítás:
+Telepítés után ennek ezt kell mutatnia:
+
+```text
+/usr/local/bin/minikube
+```
+
+---
+
+### Could not resolve host: install
+
+Ez akkor történik, ha a `curl` és az `install` parancs egy sorba lett írva.
+
+Rossz:
 
 ```bash
-sudo systemctl enable --now docker
+curl -LO https://github.com/kubernetes/minikube/releases/latest/download/minikube-linux-amd64 install minikube-linux-amd64 /usr/local/bin/minikube
 ```
 
-### User nincs docker csoportban
-
-Ha jogosultsági hiba van Docker használatakor:
+Jó:
 
 ```bash
-sudo usermod -aG docker $USER
+curl -LO https://github.com/kubernetes/minikube/releases/latest/download/minikube-linux-amd64
+install minikube-linux-amd64 /usr/local/bin/minikube
 ```
 
-Utána ki-be jelentkezés vagy reboot szükséges.
+---
 
-### Minikube nem indul
+### Root user hiba
 
-Törlés és újraindítás:
+Ha rootként indítod a Minikube-ot, kellhet a `--force` opció:
 
 ```bash
-minikube delete
-minikube start --driver=docker
+minikube start --driver=podman --force
 ```
+
+---
+
+## 15. Fontos ellenőrző parancsok
+
+```bash
+podman --version
+podman info
+minikube version
+minikube status
+minikube kubectl -- get nodes
+minikube kubectl -- get pods -A
+```
+
+---
 
 ## Rövid összefoglaló
 
-A Kubernetes tanuláshoz a legegyszerűbb helyi megoldás:
+Teljes alap telepítési sorrend:
 
 ```bash
-kubectl
-minikube
-docker
+dnf update -y
+dnf install -y podman
+
+curl -LO https://github.com/kubernetes/minikube/releases/latest/download/minikube-linux-amd64
+install minikube-linux-amd64 /usr/local/bin/minikube
+rm -f minikube-linux-amd64
+
+minikube version
+minikube start --driver=podman --force
+minikube status
+minikube kubectl -- get nodes
 ```
 
-Alap folyamat:
-
-1. `kubectl` telepítése
-2. `minikube` telepítése
-3. Docker ellenőrzése
-4. `minikube start --driver=docker`
-5. `kubectl get nodes`
-6. első deployment létrehozása
-7. service létrehozása
-8. törlés és takarítás
+Ha a node `Ready` állapotú, akkor a helyi Kubernetes cluster működik.
