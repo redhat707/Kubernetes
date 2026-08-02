@@ -1,6 +1,22 @@
-# Kubernetes First Steps
+# Kubernetes First Steps with Minikube kubectl
 
 Ez egy alap Kubernetes jegyzet Linux admin / DevOps irányú tanuláshoz.
+
+Ebben a jegyzetben a `kubectl` parancsot a Minikube-on keresztül használjuk:
+
+```bash
+minikube kubectl -- PARANCS
+```
+
+Példa:
+
+```bash
+minikube kubectl -- get pods
+```
+
+Ez akkor is működhet, ha a rendszerre külön nincs telepítve a `kubectl`.
+
+---
 
 ## Mi az a Kubernetes?
 
@@ -15,6 +31,8 @@ Tipikus feladatai:
 - konfigurációk kezelése
 - deploymentek frissítése
 
+---
+
 ## 1. Alapfogalmak
 
 | Fogalom | Jelentés |
@@ -28,38 +46,49 @@ Tipikus feladatai:
 | ConfigMap | Konfigurációs adatok tárolása |
 | Secret | Érzékeny adatok tárolása |
 | kubectl | Parancssori eszköz Kubernetes kezeléséhez |
+| Minikube | Helyi, tanulásra alkalmas Kubernetes cluster |
 
-## 2. kubectl alap parancsok
+---
+
+## 2. Minikube kubectl alap parancsok
 
 Cluster információ:
 
 ```bash
-kubectl cluster-info
+minikube kubectl -- cluster-info
 ```
 
 Node-ok listázása:
 
 ```bash
-kubectl get nodes
+minikube kubectl -- get nodes
 ```
 
 Podok listázása:
 
 ```bash
-kubectl get pods
+minikube kubectl -- get pods
 ```
 
 Minden fontos objektum listázása:
 
 ```bash
-kubectl get all
+minikube kubectl -- get all
 ```
 
 Namespace-ek listázása:
 
 ```bash
-kubectl get namespaces
+minikube kubectl -- get namespaces
 ```
+
+Minden namespace podjainak listázása:
+
+```bash
+minikube kubectl -- get pods -A
+```
+
+---
 
 ## 3. Első Pod létrehozása
 
@@ -87,21 +116,37 @@ spec:
 Alkalmazás:
 
 ```bash
-kubectl apply -f nginx-pod.yaml
+minikube kubectl -- apply -f nginx-pod.yaml
+```
+
+Fontos: a `--` jel kell a `minikube kubectl` után.
+
+Rossz:
+
+```bash
+minikube kubectl apply -f nginx-pod.yaml
+```
+
+Jó:
+
+```bash
+minikube kubectl -- apply -f nginx-pod.yaml
 ```
 
 Ellenőrzés:
 
 ```bash
-kubectl get pods
-kubectl describe pod nginx-pod
+minikube kubectl -- get pods
+minikube kubectl -- describe pod nginx-pod
 ```
 
 Törlés:
 
 ```bash
-kubectl delete pod nginx-pod
+minikube kubectl -- delete pod nginx-pod
 ```
+
+---
 
 ## 4. Deployment példa
 
@@ -138,15 +183,23 @@ spec:
 Alkalmazás:
 
 ```bash
-kubectl apply -f nginx-deployment.yaml
+minikube kubectl -- apply -f nginx-deployment.yaml
 ```
 
 Ellenőrzés:
 
 ```bash
-kubectl get deployments
-kubectl get pods
+minikube kubectl -- get deployments
+minikube kubectl -- get pods
 ```
+
+Részletes ellenőrzés:
+
+```bash
+minikube kubectl -- describe deployment nginx-deployment
+```
+
+---
 
 ## 5. Service példa
 
@@ -178,92 +231,162 @@ spec:
 Alkalmazás:
 
 ```bash
-kubectl apply -f nginx-service.yaml
+minikube kubectl -- apply -f nginx-service.yaml
 ```
 
 Ellenőrzés:
 
 ```bash
-kubectl get services
-kubectl describe service nginx-service
+minikube kubectl -- get services
+minikube kubectl -- describe service nginx-service
 ```
 
-## 6. Logok és hibakeresés
+---
+
+## 6. NodePort Service példa Minikube-hoz
+
+Minikube alatt teszteléshez gyakran egyszerűbb `NodePort` service-t használni.
+
+Fájl neve:
+
+```text
+nginx-nodeport-service.yaml
+```
+
+Tartalom:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-nodeport-service
+spec:
+  selector:
+    app: nginx
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: NodePort
+```
+
+Alkalmazás:
+
+```bash
+minikube kubectl -- apply -f nginx-nodeport-service.yaml
+```
+
+Ellenőrzés:
+
+```bash
+minikube kubectl -- get services
+```
+
+URL lekérése:
+
+```bash
+minikube service nginx-nodeport-service --url
+```
+
+---
+
+## 7. Logok és hibakeresés
 
 Pod részletes információ:
 
 ```bash
-kubectl describe pod nginx-pod
+minikube kubectl -- describe pod nginx-pod
 ```
 
 Pod logok:
 
 ```bash
-kubectl logs nginx-pod
+minikube kubectl -- logs nginx-pod
 ```
 
 Deployment részletes információ:
 
 ```bash
-kubectl describe deployment nginx-deployment
+minikube kubectl -- describe deployment nginx-deployment
 ```
 
 Események listázása:
 
 ```bash
-kubectl get events
+minikube kubectl -- get events
 ```
 
-## 7. Objektumok törlése
+Minden namespace eseményei:
+
+```bash
+minikube kubectl -- get events -A
+```
+
+---
+
+## 8. Objektumok törlése
 
 Pod törlése:
 
 ```bash
-kubectl delete pod nginx-pod
+minikube kubectl -- delete pod nginx-pod
 ```
 
 Deployment törlése:
 
 ```bash
-kubectl delete deployment nginx-deployment
+minikube kubectl -- delete deployment nginx-deployment
 ```
 
 Service törlése:
 
 ```bash
-kubectl delete service nginx-service
+minikube kubectl -- delete service nginx-service
+```
+
+NodePort Service törlése:
+
+```bash
+minikube kubectl -- delete service nginx-nodeport-service
 ```
 
 YAML fájl alapján törlés:
 
 ```bash
-kubectl delete -f nginx-deployment.yaml
-kubectl delete -f nginx-service.yaml
+minikube kubectl -- delete -f nginx-deployment.yaml
+minikube kubectl -- delete -f nginx-service.yaml
+minikube kubectl -- delete -f nginx-nodeport-service.yaml
 ```
 
-## 8. Fontos parancsok röviden
+---
+
+## 9. Fontos parancsok röviden
 
 ```bash
-kubectl get pods
-kubectl get deployments
-kubectl get services
-kubectl get all
-kubectl describe pod POD_NEVE
-kubectl logs POD_NEVE
-kubectl apply -f fajl.yaml
-kubectl delete -f fajl.yaml
+minikube kubectl -- get nodes
+minikube kubectl -- get pods
+minikube kubectl -- get deployments
+minikube kubectl -- get services
+minikube kubectl -- get all
+minikube kubectl -- describe pod POD_NEVE
+minikube kubectl -- logs POD_NEVE
+minikube kubectl -- apply -f fajl.yaml
+minikube kubectl -- delete -f fajl.yaml
 ```
 
-## 9. Rövid összefoglaló
+---
 
-Az első Kubernetes lépések:
+## 10. Rövid összefoglaló
 
-1. `kubectl` használata
-2. pod létrehozása
-3. deployment létrehozása
-4. service létrehozása
-5. logok és hibák ellenőrzése
-6. objektumok törlése
+Az első Kubernetes lépések Minikube alatt:
+
+1. Minikube cluster indítása
+2. `minikube kubectl --` használata
+3. Pod létrehozása
+4. Deployment létrehozása
+5. Service létrehozása
+6. Logok és hibák ellenőrzése
+7. Objektumok törlése
 
 A Kubernetes tanulásnál a legfontosabb első körben megérteni:
 
@@ -271,4 +394,26 @@ A Kubernetes tanulásnál a legfontosabb első körben megérteni:
 - mi a Deployment,
 - mi a Service,
 - hogyan működik a YAML alapú konfiguráció,
-- hogyan kell hibát keresni `kubectl describe` és `kubectl logs` segítségével.
+- hogyan kell hibát keresni `describe`, `logs` és `get events` segítségével.
+
+---
+
+## 11. Megjegyzés a parancsformáról
+
+Ha külön telepítve van a `kubectl`, akkor használható így:
+
+```bash
+kubectl get pods
+```
+
+Ha nincs külön `kubectl`, akkor Minikube-on keresztül:
+
+```bash
+minikube kubectl -- get pods
+```
+
+Ebben a jegyzetben végig ezt a formát használjuk:
+
+```bash
+minikube kubectl -- ...
+```
