@@ -1,4 +1,4 @@
-# Minikube Install with Podman on Rocky Linux
+# Minikube Install with Podman on Rocky Linux 
 
 Ez a jegyzet egy alap Kubernetes tanulókörnyezet telepítését mutatja be Rocky Linux alatt.
 
